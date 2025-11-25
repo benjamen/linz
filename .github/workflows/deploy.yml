@@ -13,8 +13,7 @@ jobs:
 
       - name: Install Supabase CLI
         run: |
-          sudo apt-get update
-          sudo apt-get install -y supabase
+          curl -fsSL https://get.supabase.io/install.sh | bash
 
       - name: Link Project & Deploy
         env:
