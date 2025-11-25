@@ -1,3 +1,5 @@
+name: Update LINZ Addresses
+
 on:
   schedule:
     - cron: "0 0 * * 1" # Every Monday
