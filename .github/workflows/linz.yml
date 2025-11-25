@@ -1,0 +1,27 @@
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Every Monday
+  workflow_dispatch: {}
+
+jobs:
+  update-linz:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download LINZ Address Dataset
+        run: |
+          curl -L "https://data.linz.govt.nz/download/fileID" -o linz.csv
+          # Insert the real URL
+
+      - name: Install PostgreSQL tools
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Import data into Supabase
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" -c "\copy staging_addresses FROM './linz.csv' CSV HEADER"
+          psql "$SUPABASE_DB_URL" -f scripts/ingest.sql
