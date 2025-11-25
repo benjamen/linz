@@ -11,14 +11,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
       - name: Install Supabase CLI
         run: |
-          curl -fsSL https://get.supabase.io/install.sh | bash
+          npm install --prefix /tmp supabase
 
       - name: Link Project & Deploy
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase link --project-ref $SUPABASE_PROJECT_REF
-          supabase functions deploy autocomplete
+          /tmp/node_modules/.bin/supabase link --project-ref $SUPABASE_PROJECT_REF
+          /tmp/node_modules/.bin/supabase functions deploy autocomplete
