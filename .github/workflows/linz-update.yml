@@ -1,0 +1,28 @@
+name: Update LINZ Street Addresses
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+jobs:
+  update-linz:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download LINZ CSV
+        run: |
+          curl -L "https://data.linz.govt.nz/download/fileID" -o linz.csv
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Load CSV into Supabase
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" -c "CREATE TEMP TABLE staging_addresses (LIKE nz_addresses INCLUDING ALL);"
+          psql "$SUPABASE_DB_URL" -c "\copy staging_addresses FROM 'linz.csv' CSV HEADER;"
+          psql "$SUPABASE_DB_URL" -f scripts/ingest.sql
