@@ -12,7 +12,9 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Supabase CLI
-        run: npm install -g supabase
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y supabase
 
       - name: Link Project & Deploy
         env:
