@@ -1,9 +1,23 @@
 import express from 'express'
 import cors from 'cors'
+import rateLimit from 'express-rate-limit'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+// basic in-memory cache for API responses to reduce ArcGIS calls
+const cache = new Map()
+const CACHE_TTL_MS = 60 * 1000 // 60s
+
+// simple rate limiter for /api endpoints
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // limit each IP to 120 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false
+})
+app.use('/api/', apiLimiter)
 
 const ADDRESS_API_URL = 'https://services.arcgis.com/xdsHIIxuCWByZiCB/ArcGIS/rest/services/LINZ_NZ_Addresses_Pilot/FeatureServer/0/query'
 const BOUNDARY_API_URL = 'https://services.arcgis.com/xdsHIIxuCWByZiCB/ArcGIS/rest/services/LINZ_NZ_Property_Boundaries/FeatureServer/0/query'
@@ -155,6 +169,17 @@ app.get('/api/search', async (req, res) => {
   const q = (req.query.q || '').trim()
   if (!q) return res.status(400).json({ error: 'missing q query param' })
 
+  // check cache
+  try {
+    const cacheKey = `search:${q}`
+    const entry = cache.get(cacheKey)
+    if (entry && entry.expires > Date.now()) {
+      return res.json(entry.data)
+    }
+  } catch (e) {
+    // ignore cache errors
+  }
+
   try {
     const where = `full_address LIKE '${q.replace(/'/g, "''")}%'
     `
@@ -173,7 +198,14 @@ app.get('/api/search', async (req, res) => {
       }
     }
 
-    res.json({ query: q, count: results.length, results })
+    const out = { query: q, count: results.length, results }
+
+    try {
+      const cacheKey = `search:${q}`
+      cache.set(cacheKey, { data: out, expires: Date.now() + CACHE_TTL_MS })
+    } catch (e) {}
+
+    res.json(out)
   } catch (e) {
     res.status(500).json({ error: String(e) })
   }
