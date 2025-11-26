@@ -5,7 +5,11 @@ WORKDIR /app
 
 # Install dependencies (use package-lock.json when present)
 COPY package*.json ./
-RUN npm ci --only=production
+# Use `npm install` when a lockfile may be missing in the repo
+# `npm ci` requires a package-lock.json; Render's build failed because
+# the repository did not include a lockfile. `npm install --omit=dev`
+# installs only production deps and works without a lockfile.
+RUN npm install --omit=dev
 
 # Copy sources
 COPY . .
